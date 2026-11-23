@@ -130,6 +130,7 @@ V.rekam = () => {
   const q = new URLSearchParams(location.hash.split('?')[1] || ''), o = S.rapat.filter(r => r.status === 'terjadwal' || r.status === 'merekam');
   $('#view').innerHTML = o.length ? '<div class="card" style="max-width:640px;margin:auto"><h3>Ruang Rekam</h3><label>Rapat<select id="rid">' + o.map(r => '<option value="' + r.id + '"' + (r.id === q.get('rid') ? ' selected' : '') + '>' + E(r.judul) + ' — ' + tgl(r.tanggal) + '</option>').join('') + '</select></label><div class="note">Rapat ini akan direkam. Pastikan seluruh peserta sudah diberi tahu. Audio dikirim ke Drive per 5 menit.</div><label class="ck"><input type="checkbox" id="ok"> Saya mengonfirmasi seluruh peserta telah diberi tahu</label><button class="rec" id="go" aria-label="Mulai Rekam">' + MIC + '</button><p class="c mut">Mulai Rekam</p></div>' : '<div class="card empty">Belum ada rapat terjadwal. <a href="#jadwal">Jadwalkan rapat</a> terlebih dahulu.</div>';
   const go = $('#go'); if (go) go.onclick = () => { if (!$('#ok').checked) return toast('Centang konfirmasi pemberitahuan peserta dahulu', 'er'); Rec.start($('#rid').value); };
+  if (Rec.uploadUI) Rec.uploadUI();
 };
 
 /* ===== TINJAU & TERBITKAN ===== */

@@ -20,3 +20,28 @@ V.kontak = () => {
   $('#ip').onclick = run(true); $('#ij').onclick = run(false);
 };
 if (!$('#app').hidden) render();
+
+/* ===== Unggah rekaman dari HP / laptop (m4a, mp3, wav, aac, ogg, flac) ===== */
+Rec.uploadUI = () => {
+  const o = S.rapat.filter(r => ['terjadwal', 'merekam', 'gagal'].includes(r.status)); if (!o.length) return;
+  const q = new URLSearchParams(location.hash.split('?')[1] || '');
+  $('#view').insertAdjacentHTML('beforeend', '<div class="card" style="max-width:640px;margin:16px auto"><h3>Unggah Rekaman dari HP</h3><p class="mut sm">Pilih berkas suara (MP3, M4A, WAV, AAC, OGG, FLAC), maksimal 12 MB (± 15–25 menit). Rapat lebih panjang: potong atau kompres dulu menjadi MP3. Rapat berstatus Gagal bisa diunggah ulang di sini.</p><label>Rapat<select id="urid">' + o.map(r => '<option value="' + r.id + '"' + (r.id === q.get('rid') ? ' selected' : '') + '>' + E(r.judul) + ' — ' + tgl(r.tanggal) + (r.status === 'gagal' ? ' (gagal)' : '') + '</option>').join('') + '</select></label><label>Berkas audio<input type="file" id="uf" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.flac"></label><label class="ck"><input type="checkbox" id="uok"> Saya mengonfirmasi seluruh peserta telah diberi tahu</label><button class="btn" id="ub">Unggah & Proses</button><p class="mut sm" id="us"></p></div>');
+  $('#ub').onclick = Rec.upload;
+};
+Rec.upload = async () => {
+  const f = $('#uf').files[0], rid = $('#urid').value;
+  if (!f) return toast('Pilih berkas audio dahulu', 'er');
+  if (!$('#uok').checked) return toast('Centang konfirmasi pemberitahuan peserta dahulu', 'er');
+  if (f.size > 12 * 1048576) return toast('Berkas ' + (f.size / 1048576).toFixed(1) + ' MB melebihi 12 MB. Potong atau kompres dulu menjadi MP3.', 'er');
+  const M = { mp3: 'audio/mp3', wav: 'audio/wav', aac: 'audio/aac', m4a: 'audio/mp4', ogg: 'audio/ogg', flac: 'audio/flac', aiff: 'audio/aiff' }, ext = (f.name.split('.').pop() || '').toLowerCase(), mime = M[ext] || (f.type || '').split(';')[0];
+  if (!mime.startsWith('audio/')) return toast('Format berkas tidak didukung', 'er');
+  const b = $('#ub'); b.disabled = true; $('#us').textContent = 'Mengunggah… jangan tutup halaman ini.';
+  try {
+    const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+    await Api.call('rekam.mulai', { rid, ganti: true });
+    await Api.call('rekam.potongan', { rid, no: 1, mime, b64 });
+    await Api.call('rekam.selesai', { rid });
+    const r = S.rapat.find(x => x.id === rid); if (r) r.status = 'diproses'; save();
+    toast('Berkas terkirim. Notulensi sedang disusun.'); location.hash = '#tinjau'; refresh();
+  } catch (e) { b.disabled = false; $('#us').textContent = ''; toast(e.message, 'er'); }
+};
